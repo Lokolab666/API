@@ -1,25 +1,69 @@
 # SQLAlchemy models that correspond to the database tables.
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
-from database import Base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
-# TODO: Add the values of each column
-class Course(Base):
-    __tablename__ = "courses"
-    id = Column(Integer, primary_key=True, index=True)
-#    title = Column(String, index=True)
-#    inscriptions = relationship("Inscription", back_populates="course")
+server = "simulacion2024.database.windows.net"
+dbname = "Estudiantes"  
+username = "Karen"
+password = "Simulacion2024."
+
+DATABASE_URL = f"mssql+pyodbc://{username}:{password}@{server}/{dbname}?driver=ODBC+Driver+17+for+SQL+Server"
+
+engine = create_engine(DATABASE_URL)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+
+class Subject(Base):
+    __tablename__ = "subjects"
+    subject_id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String, nullable=False)
+    aula = Column(String, nullable=False)
+    creditos = Column(Integer, nullable=False)
+    cupos = Column(Integer, nullable=False)
+    cont = Column(Integer, nullable=False)
+    registrations = relationship("Registration", back_populates="subject")
+
+
+    def create_new_instance(self, db):
+        if self.cont >= self.cupos:
+            new_instance = Subject(
+                nombre=f"{self.nombre} 2.0",
+                aula=self.aula,
+                creditos=self.creditos,
+                cupos=self.cupos,
+                cont=0  
+            )
+            db.add(new_instance)
+            db.commit()
+            db.refresh(new_instance)
+            return new_instance
+        return None 
+
 
 class Student(Base):
     __tablename__ = "students"
-    id = Column(Integer, primary_key=True, index=True)
-#    name = Column(String, index=True)
-#    inscriptions = relationship("Inscription", back_populates="student")
+    student_id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String, nullable=False)
+    codigo = Column(Integer, nullable=False)
+    numero_identificacion = Column(Integer, nullable=False)
+    registrations = relationship("Registration", back_populates="student")
 
-class Inscription(Base):
-    __tablename__ = "inscriptions"
-    id = Column(Integer, primary_key=True, index=True)
-#    course_id = Column(Integer, ForeignKey('courses.id'))
-#    student_id = Column(Integer, ForeignKey('students.id'))
-#    course = relationship("Course", back_populates="inscriptions")
-#    student = relationship("Student", back_populates="inscriptions")
+
+class Registration(Base):
+    __tablename__ = "registrations"
+    inscripcion_id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey('students.student_id'))  
+    student = relationship("Student", back_populates="registrations")
+    subject_id = Column(Integer, ForeignKey('subjects.subject_id'))
+    subject = relationship("Subject", back_populates="registrations")
+    student = relationship("Student", back_populates="registrations")
+
+
+Base.metadata.create_all(bind=engine)
+

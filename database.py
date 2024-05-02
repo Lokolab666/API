@@ -2,10 +2,20 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-#TODO: Configue the username and password of the SQL Server
-DATABASE_URL = "mssql+pyodbc://username:password@server/dbname?driver=SQL+Server"
+
+
+server = "simulacion2024.database.windows.net"
+dbname = "Estudiantes"  
+username = "Karen"
+password = "Simulacion2024."
+
+
+DATABASE_URL = f"mssql+pyodbc://{username}:{password}@{server}/{dbname}?driver=ODBC+Driver+17+for+SQL+Server"
+
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 Base = declarative_base()
+
