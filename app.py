@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Query
+from typing import Optional
 from sqlalchemy.orm import Session
 import models, schemas, crud
 from database import SessionLocal, engine
@@ -100,6 +101,37 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
     return {"detail": "Student deleted successfully"}
+
+
+@app.get("/students/", response_model=list[schemas.Student])
+def read_students(
+    page_size: int = Query(10, alias="PageSize", gt=0),
+    page_number: int = Query(1, alias="PageNumber", gt=0),
+    sort_by: Optional[str] = Query("created_at", alias="SortBy", regex="^(nombre|apellido|numero_identificacion|created_at)$"),
+    sort_direction: str = Query("desc", alias="SortDirection", regex="^(asc|desc)$"),
+    db: Session = Depends(get_db)):
+
+    students_query = db.query(models.Student)
+
+    # Sorting logic
+    if sort_by == "nombre":
+        students_query = students_query.order_by(models.Student.nombre.desc() if sort_direction == "desc" else models.Student.nombre.asc())
+    elif sort_by == "apellido":
+        students_query = students_query.order_by(models.Student.apellido.desc() if sort_direction == "desc" else models.Student.apellido.asc())
+    elif sort_by == "numero_identificacion":
+        students_query = students_query.order_by(models.Student.numero_identificacion.desc() if sort_direction == "desc" else models.Student.numero_identificacion.asc())
+    else:
+        # Default sort by created_at
+        students_query = students_query.order_by(models.Student.created_at.desc() if sort_direction == "desc" else models.Student.created_at.asc())
+
+    # Pagination logic
+    offset = (page_number - 1) * page_size
+    students_query = students_query.offset(offset).limit(page_size)
+
+    # Execute query and fetch data
+    students = students_query.all()
+
+    return students
 
 # Subject Endpoints
 
