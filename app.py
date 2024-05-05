@@ -41,9 +41,9 @@ def create_registration(registration: schemas.RegistrationCreate, db: Session = 
     
     new_registration = crud.create_registration(db=db, registration=registration)
     crud.update_subject_counter(db, registration.subject_id)
-    raise HTTPException(status_code=status.HTTP_200_OK, detail="Student OK to register")
+    #raise HTTPException(status_code=status.HTTP_200_OK, detail="Student OK to register")
     
-    # return new_registration
+    return new_registration
 
 @app.get("/registrations/{registration_id}", response_model=schemas.Registration, status_code=status.HTTP_200_OK)
 def read_registration(registration_id: int, db: Session = Depends(get_db)):

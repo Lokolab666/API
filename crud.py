@@ -4,7 +4,11 @@ from models import Student, Subject, Registration
 
 # CRUD for student
 def create_student(db: Session, student: schemas.StudentCreate):
-    db_student = models.Student(name=student.nombre)
+    db_student = models.Student(
+        nombre=student.nombre,
+        codigo=student.codigo,
+        numero_identificacion=student.numero_identificacion
+    )
     db.add(db_student)
     db.commit()
     db.refresh(db_student)
@@ -17,10 +21,19 @@ def get_student(db: Session, student_id: int):
 
 def update_student(db: Session, student_id: int, student: schemas.StudentUpdate):
     db_student = db.query(models.Student).filter(Student.student_id == student_id).first()
-    if db_student:
+    if not db_student:
+        return None
+    
+    if student.nombre is not None:
         db_student.nombre = student.nombre
-        db.commit()
-        db.refresh(db_student)
+    if student.codigo is not None:
+        db_student.codigo = student.codigo
+    if student.numero_identificacion is not None:
+        db_student.numero_identificacion = student.numero_identificacion
+
+    db.commit()
+    db.refresh(db_student)
+
     return db_student
 
 
@@ -34,7 +47,13 @@ def delete_student(db: Session, student_id: int):
 
 # CRUD for Subject
 def create_subject(db: Session, subject: schemas.SubjectCreate):
-    db_subject = models.Subject(materia_id=subject.materia_id)
+    db_subject = models.Subject(
+        nombre=subject.nombre,
+        aula=subject.aula,
+        creditos=subject.creditos,
+        cupos=subject.cupos,
+        cont=subject.cont
+    )
     db.add(db_subject)
     db.commit()
     db.refresh(db_subject)
@@ -79,8 +98,8 @@ def get_registration(db: Session, registration_id: int):
 def update_registration(db: Session, registration_id: int, registration: schemas.RegistrationUpdate):
     db_registration = db.query(Registration).filter(Registration.inscripcion_id == registration_id).first()
     if db_registration:
-        db_registration.inscripcion_id = registration.materia_id
-        db_registration.student_id = registration.estudiante_id
+        db_registration.subject_id = registration.subject_id
+        db_registration.student_id = registration.student_id
         db.commit()
         db.refresh(db_registration)
     return db_registration

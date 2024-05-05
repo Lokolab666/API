@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Optional
 
 # Student schemas
 class StudentBase(BaseModel):
@@ -6,17 +7,22 @@ class StudentBase(BaseModel):
 
 
 class StudentCreate(StudentBase):
-    pass
+    nombre: str
+    codigo: int
+    numero_identificacion: int
+    
 
 
 class StudentUpdate(BaseModel):
-    nombre: str = None
-    codigo: int = Field(None, gt=0)
-    numero_identificacion: int = None
+    student_id: int = 0
+    nombre: Optional[str] = None
+    codigo: Optional[int] = Field(None, gt=0)
+    numero_identificacion: Optional[int] = None
 
 
 class Student(StudentBase):
-    estudiante_id: int
+    student_id: int
+    nombre: str
     codigo: int
     numero_identificacion: int
 
@@ -26,15 +32,14 @@ class Student(StudentBase):
 
 # Subject schemas
 class SubjectBase(BaseModel):
-    materia_id: int
+    nombre: str
+
+class SubjectCreate(SubjectBase):
     nombre: str
     aula: str
     creditos: int
     cupos: int
-
-
-class SubjectCreate(SubjectBase):
-    pass
+    cont: int
 
 
 class SubjectUpdate(BaseModel):
@@ -42,10 +47,16 @@ class SubjectUpdate(BaseModel):
     aula: str = None
     creditos: int = Field(None, gt=0)
     cupos: int = Field(None, ge=0)
+    cont: int = Field(None, ge=0)
 
 
 class Subject(SubjectBase):
-    materia_id: int
+    subject_id: int
+    nombre: str
+    aula: str
+    creditos: int
+    cupos: int
+    cont: int
 
     class Config:
         orm_mode = True
@@ -53,8 +64,8 @@ class Subject(SubjectBase):
 
 # Registration schemas
 class RegistrationBase(BaseModel):
-    estudiante_id: int
-    materia_id: int 
+    student_id: int
+    subject_id: int 
 
 
 class RegistrationCreate(RegistrationBase):
@@ -62,12 +73,14 @@ class RegistrationCreate(RegistrationBase):
 
 
 class RegistrationUpdate(BaseModel):
-    estudiante_id: int = None
-    materia_id: int = None
+    student_id: int = None
+    subject_id: int = None
 
 
 class Registration(RegistrationBase):
     inscripcion_id: int
+    student_id: int
+    subject_id: int
 
     class Config:
         orm_mode = True
