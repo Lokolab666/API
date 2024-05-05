@@ -21,8 +21,8 @@ def get_db():
 
 #Registration Endpoints
 
-@app.post("/registrations/", response_model=schemas.Inscription)
-def create_registration(registration: schemas.InscriptionCreate, db: Session = Depends(get_db)):
+@app.post("/registrations/", response_model=schemas.Registration)
+def create_registration(registration: schemas.RegistrationCreate, db: Session = Depends(get_db)):
     db_student = crud.get_student(db, registration.student_id)
     db_subject = crud.get_subject(db, registration.subject_id)
     if db_student is None:
