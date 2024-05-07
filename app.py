@@ -5,8 +5,20 @@ import models, schemas, crud
 from database import SessionLocal, engine
 from models import Student, Subject, Registration
 import uvicorn
+from enum import Enum
 
 models.Base.metadata.create_all(bind=engine)
+
+class SortBy(str, Enum):
+    student_id = "student_id"
+    nombre = "nombre"
+    codigo = "codigo"
+    numero_identificacion = "numero_identificacion"
+
+
+class SortDirection(str, Enum):
+    asc = "asc"
+    desc = "desc"
 
 app = FastAPI()
 
@@ -107,22 +119,19 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
 def read_students(
     page_size: int = Query(10, alias="PageSize", gt=0),
     page_number: int = Query(1, alias="PageNumber", gt=0),
-    sort_by: Optional[str] = Query("created_at", alias="SortBy", regex="^(nombre|apellido|numero_identificacion|created_at)$"),
-    sort_direction: str = Query("desc", alias="SortDirection", regex="^(asc|desc)$"),
+    sort_by: SortBy = Query(SortBy.nombre, alias="SortParameter.SortBy"),
+    sort_direction: SortDirection = Query(SortDirection.desc, alias="SortParameter.SortDirection"),
     db: Session = Depends(get_db)):
 
     students_query = db.query(models.Student)
+    
 
     # Sorting logic
-    if sort_by == "nombre":
-        students_query = students_query.order_by(models.Student.nombre.desc() if sort_direction == "desc" else models.Student.nombre.asc())
-    elif sort_by == "apellido":
-        students_query = students_query.order_by(models.Student.apellido.desc() if sort_direction == "desc" else models.Student.apellido.asc())
-    elif sort_by == "numero_identificacion":
-        students_query = students_query.order_by(models.Student.numero_identificacion.desc() if sort_direction == "desc" else models.Student.numero_identificacion.asc())
+
+    if sort_direction == "asc":
+        students_query = students_query.order_by(getattr(models.Student, sort_by.value).asc())
     else:
-        # Default sort by created_at
-        students_query = students_query.order_by(models.Student.created_at.desc() if sort_direction == "desc" else models.Student.created_at.asc())
+        students_query = students_query.order_by(getattr(models.Student, sort_by.value).desc())
 
     # Pagination logic
     offset = (page_number - 1) * page_size
