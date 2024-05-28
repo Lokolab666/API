@@ -3,6 +3,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 import models, schemas, crud
 from database import SessionLocal, engine
+from fastapi.middleware.cors import CORSMiddleware
 from models import Student, Subject, Registration
 import uvicorn
 from enum import Enum
@@ -20,7 +21,17 @@ class SortDirection(str, Enum):
     asc = "asc"
     desc = "desc"
 
+
 app = FastAPI()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 
 def get_db():
@@ -53,9 +64,11 @@ def create_registration(registration: schemas.RegistrationCreate, db: Session = 
     
     new_registration = crud.create_registration(db=db, registration=registration)
     crud.update_subject_counter(db, registration.subject_id)
-    #raise HTTPException(status_code=status.HTTP_200_OK, detail="Student OK to register")
+
+    # raise HTTPException(status_code=status.HTTP_200_OK, detail="Student OK to register")
     
     return new_registration
+
 
 @app.get("/registrations/{registration_id}", response_model=schemas.Registration, status_code=status.HTTP_200_OK)
 def read_registration(registration_id: int, db: Session = Depends(get_db)):
@@ -65,12 +78,14 @@ def read_registration(registration_id: int, db: Session = Depends(get_db)):
     return db_registration
 
 
+
 @app.put("/registrations/{registration_id}", response_model=schemas.Registration, status_code=status.HTTP_200_OK)
 def update_registration(registration_id: int, registration: schemas.RegistrationUpdate, db: Session = Depends(get_db)):
     db_registration = crud.update_registration(db, registration_id, registration)
     if db_registration is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found")
     return db_registration
+
 
 
 @app.delete("/registrations/{registration_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -88,12 +103,14 @@ def create_student(student: schemas.StudentCreate, db: Session = Depends(get_db)
     return crud.create_student(db=db, student=student)
 
 
+
 @app.get("/students/{student_id}", response_model=schemas.Student)
 def read_student(student_id: int, db: Session = Depends(get_db)):
     db_student = db.query(Student).filter(Student.student_id == student_id).first()
     if db_student is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
     return db_student
+
 
 
 @app.patch("/students/{student_id}", response_model=schemas.Student)
@@ -107,12 +124,14 @@ def update_student(student_id: int, student: schemas.Student, db: Session = Depe
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
+
 @app.delete("/students/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_student(student_id: int, db: Session = Depends(get_db)):
     success = crud.delete_student(db, student_id)
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
     return {"detail": "Student deleted successfully"}
+
 
 
 @app.get("/students/", response_model=list[schemas.Student])
@@ -124,7 +143,6 @@ def read_students(
     db: Session = Depends(get_db)):
 
     students_query = db.query(models.Student)
-    
 
     # Sorting logic
 
@@ -144,9 +162,11 @@ def read_students(
 
 # Subject Endpoints
 
+
 @app.post("/subjects/", response_model=schemas.Subject, status_code=status.HTTP_201_CREATED)
 def create_subject(subject: schemas.SubjectCreate, db: Session = Depends(get_db)):
     return crud.create_subject(db=db, subject=subject)
+
 
 
 @app.get("/subjects/{subject_id}", response_model=schemas.Subject, status_code=status.HTTP_200_OK)
@@ -157,6 +177,7 @@ def read_subject(subject_id: int, db: Session = Depends(get_db)):
     return db_subject
 
 
+
 @app.put("/subjects/{subject_id}", response_model=schemas.Subject, status_code=status.HTTP_200_OK)
 def update_subject(subject_id: int, subject: schemas.SubjectUpdate, db: Session = Depends(get_db)):
     db_subject = crud.update_subject(db, subject_id, subject)
@@ -165,12 +186,14 @@ def update_subject(subject_id: int, subject: schemas.SubjectUpdate, db: Session 
     return db_subject
 
 
+
 @app.delete("/subjects/{subject_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_subject(subject_id: int, db: Session = Depends(get_db)):
     success = crud.delete_subject(db, subject_id)
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
     return {"detail": "Subject deleted successfully"}
+
 
 
 if __name__ == "__main__":
