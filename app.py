@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Query
-from typing import Optional
+from typing import List, Optional
 from sqlalchemy.orm import Session
 import models, schemas, crud
 from database import SessionLocal, engine
@@ -159,6 +159,15 @@ def read_students(
     students = students_query.all()
 
     return students
+
+
+@app.get("/students/{student_id}/subjects/", response_model=List[schemas.Subject])
+def get_student_subjects(student_id: int, db: Session = Depends(get_db)):
+    subjects = db.query(models.Subject).\
+        join(models.Registration, models.Subject.subject_id == models.Registration.subject_id).\
+        filter(models.Registration.student_id == student_id).all()
+    return subjects
+
 
 # Subject Endpoints
 

@@ -3,12 +3,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-
-server = "simulacion2024.database.windows.net"
-dbname = "Estudiantes"  
-username = "Karen"
-password = "Simulacion2024."
-
+server = "34.72.89.63"
+dbname = "Estudiantes2024"
+username = "sqlserver"
+password = "Simulacion2024"
 
 DATABASE_URL = f"mssql+pyodbc://{username}:{password}@{server}/{dbname}?driver=ODBC+Driver+17+for+SQL+Server"
 
