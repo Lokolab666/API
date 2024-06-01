@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi import FastAPI, Depends, HTTPException, status, Query, Request
 from typing import List, Optional
 from sqlalchemy.orm import Session
 import models, schemas, crud
@@ -6,6 +6,8 @@ from database import SessionLocal, engine
 from fastapi.middleware.cors import CORSMiddleware
 from models import Student, Subject, Registration
 import uvicorn
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from enum import Enum
 
 models.Base.metadata.create_all(bind=engine)
@@ -15,6 +17,14 @@ class SortBy(str, Enum):
     nombre = "nombre"
     codigo = "codigo"
     numero_identificacion = "numero_identificacion"
+
+class SortBySubject(str, Enum):
+    subject_id = "subject_id"
+    nombre = "nombre"
+    aula = "aula"
+    creditos = "creditos"
+    cupos = "cupos"
+    cont = "cont"
 
 
 class SortDirection(str, Enum):
@@ -41,6 +51,22 @@ def get_db():
     finally:
         db.close()
 
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 404:
+        return JSONResponse(
+            status_code=404,
+            content={"message": "The resource you are looking for does not exist"},
+        )
+    # Pass other status codes to the default handler
+    return await request.app.default_exception_handler(request, exc)
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id: int):
+    raise HTTPException(status_code=404, detail="Item not found")
 
 #Registration Endpoints
 
@@ -185,6 +211,30 @@ def read_subject(subject_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
     return db_subject
 
+
+@app.get("/subjects/", response_model=list[schemas.Subject])
+def read_subject(
+    page_size: int = Query(10, alias="PageSize", gt=0),
+    page_number: int = Query(1, alias="PageNumber", gt=0),
+    sort_by: SortBySubject = Query(SortBySubject.nombre, alias="SortParameter.SortBy"),
+    sort_direction: SortDirection = Query(SortDirection.desc, alias="SortParameter.SortDirection"),
+    db: Session = Depends(get_db)):
+
+    subjects_query = db.query(models.Subject)
+
+    if sort_direction == "asc":
+        subjects_query = subjects_query.order_by(getattr(models.Subject, sort_by.value).asc())
+    else:
+        subjects_query = subjects_query.order_by(getattr(models.Subject, sort_by.value).desc())
+
+    # Pagination logic
+    offset = (page_number - 1) * page_size
+    subjects_query = subjects_query.offset(offset).limit(page_size)
+
+    # Execute query and fetch data
+    subjects = subjects_query.all()
+
+    return subjects
 
 
 @app.put("/subjects/{subject_id}", response_model=schemas.Subject, status_code=status.HTTP_200_OK)
