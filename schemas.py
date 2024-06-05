@@ -39,7 +39,6 @@ class SubjectCreate(SubjectBase):
     aula: str
     creditos: int
     cupos: int
-    cont: int
 
 
 class SubjectUpdate(BaseModel):
@@ -47,7 +46,6 @@ class SubjectUpdate(BaseModel):
     aula: str = None
     creditos: int = Field(None, gt=0)
     cupos: int = Field(None, ge=0)
-    cont: int = Field(None, ge=0)
 
 
 class Subject(SubjectBase):
@@ -56,7 +54,7 @@ class Subject(SubjectBase):
     aula: str
     creditos: int
     cupos: int
-    cont: int
+
 
     class Config:
         orm_mode = True

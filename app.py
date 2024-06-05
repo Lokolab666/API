@@ -24,7 +24,6 @@ class SortBySubject(str, Enum):
     aula = "aula"
     creditos = "creditos"
     cupos = "cupos"
-    cont = "cont"
 
 
 class SortDirection(str, Enum):
@@ -78,8 +77,8 @@ def create_registration(registration: schemas.RegistrationCreate, db: Session = 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
     if db_subject is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
-    if db_subject.cont >= db_subject.cupos:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Subject already full")
+    """ if db_subject.cont >= db_subject.cupos:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Subject already full") """
     existing_registration = db.query(Registration).filter(  
         Registration.student_id == registration.student_id,
         Registration.subject_id == registration.subject_id
@@ -89,7 +88,7 @@ def create_registration(registration: schemas.RegistrationCreate, db: Session = 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Student already registered for this subject")
     
     new_registration = crud.create_registration(db=db, registration=registration)
-    crud.update_subject_counter(db, registration.subject_id)
+    # crud.update_subject_counter(db, registration.subject_id)
 
     # raise HTTPException(status_code=status.HTTP_200_OK, detail="Student OK to register")
     
@@ -102,6 +101,12 @@ def read_registration(registration_id: int, db: Session = Depends(get_db)):
     if db_registration is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found")
     return db_registration
+
+
+@app.get("/registrations/", response_model=List[schemas.Registration])
+def read_registrations(db: Session = Depends(get_db)):
+    db_registrations = crud.get_all_registrations(db)
+    return db_registrations
 
 
 
@@ -252,6 +257,15 @@ def delete_subject(subject_id: int, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
     return {"detail": "Subject deleted successfully"}
+
+
+@app.get("/subjects/{subject_id}/students/", response_model=List[schemas.Student])
+def get_subject_students(subject_id: int, db: Session = Depends(get_db)):
+    students = db.query(models.Student).\
+        join(models.Registration, models.Student.student_id == models.Registration.student_id).\
+        filter(models.Registration.subject_id == subject_id).all()
+    return students
+
 
 
 

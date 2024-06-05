@@ -51,8 +51,7 @@ def create_subject(db: Session, subject: schemas.SubjectCreate):
         nombre=subject.nombre,
         aula=subject.aula,
         creditos=subject.creditos,
-        cupos=subject.cupos,
-        cont=subject.cont
+        cupos=subject.cupos
     )
     db.add(db_subject)
     db.commit()
@@ -125,3 +124,7 @@ def update_subject_counter(db: Session, subject_id: int):
             return new_instance
         return subject
     return None
+
+
+def get_all_registrations(db: Session):
+    return db.query(models.Registration).all()

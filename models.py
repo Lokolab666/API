@@ -26,7 +26,6 @@ class Subject(Base):
     aula = Column(String, nullable=False)
     creditos = Column(Integer, nullable=False)
     cupos = Column(Integer, nullable=False)
-    cont = Column(Integer, nullable=False)
     registrations = relationship("Registration", back_populates="subject")
 
 
@@ -36,8 +35,7 @@ class Subject(Base):
                 nombre=f"{self.nombre} 2.0",
                 aula=self.aula,
                 creditos=self.creditos,
-                cupos=self.cupos,
-                cont=0  
+                cupos=self.cupos
             )
             db.add(new_instance)
             db.commit()
