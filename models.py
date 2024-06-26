@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 from sqlalchemy import Column, Integer, String, ForeignKey, LargeBinary
+=======
+# SQLAlchemy models that correspond to the database tables.
+from sqlalchemy import Column, Integer, String, ForeignKey
+>>>>>>> 667e0fedd15dc0637307a7611f2e93b428a3b118
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -17,6 +22,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+<<<<<<< HEAD
 class Facultad(Base):
     __tablename__ = "facultad"
     facultad_id = Column(Integer, primary_key=True, index=True)
@@ -62,6 +68,8 @@ class Inscripcion(Base):
     student = relationship("Estudiante", back_populates="registrations")
     grupo_id = Column(Integer, ForeignKey('grupo.grupo_id'))
     grupo = relationship("Grupo", back_populates="inscripciones")
+=======
+>>>>>>> 667e0fedd15dc0637307a7611f2e93b428a3b118
 
 class Subject(Base):
     __tablename__ = "subjects"
@@ -70,9 +78,14 @@ class Subject(Base):
     aula = Column(String, nullable=False)
     creditos = Column(Integer, nullable=False)
     cupos = Column(Integer, nullable=False)
+<<<<<<< HEAD
     programa_fk = Column(Integer, ForeignKey("programa.programa_id"))
     programa = relationship("Programa", back_populates="subjects")
     registrations = relationship("Inscripcion", back_populates="subject")
+=======
+    registrations = relationship("Registration", back_populates="subject")
+
+>>>>>>> 667e0fedd15dc0637307a7611f2e93b428a3b118
 
     def create_new_instance(self, db):
         if self.cont >= self.cupos:
@@ -88,6 +101,7 @@ class Subject(Base):
             return new_instance
         return None 
 
+<<<<<<< HEAD
 class Grupo(Base):
     __tablename__ = "grupo"
     grupo_id = Column(Integer, primary_key=True, index=True)
@@ -116,3 +130,27 @@ Grupo.subject = relationship("Subject", back_populates="registrations")
 Grupo.inscripciones = relationship("Inscripcion", back_populates="grupo")
 
 Base.metadata.create_all(bind=engine)
+=======
+
+class Student(Base):
+    __tablename__ = "students"
+    student_id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String, nullable=False)
+    codigo = Column(Integer, nullable=False)
+    numero_identificacion = Column(Integer, nullable=False)
+    registrations = relationship("Registration", back_populates="student")
+
+
+class Registration(Base):
+    __tablename__ = "registrations"
+    inscripcion_id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey('students.student_id'))  
+    student = relationship("Student", back_populates="registrations")
+    subject_id = Column(Integer, ForeignKey('subjects.subject_id'))
+    subject = relationship("Subject", back_populates="registrations")
+    student = relationship("Student", back_populates="registrations")
+
+
+Base.metadata.create_all(bind=engine)
+
+>>>>>>> 667e0fedd15dc0637307a7611f2e93b428a3b118

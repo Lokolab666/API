@@ -4,7 +4,11 @@ from sqlalchemy.orm import Session
 import models, schemas, crud
 from database import SessionLocal, engine
 from fastapi.middleware.cors import CORSMiddleware
+<<<<<<< HEAD
 from models import Estudiante, Subject, Inscripcion
+=======
+from models import Student, Subject, Registration
+>>>>>>> 667e0fedd15dc0637307a7611f2e93b428a3b118
 import uvicorn
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
