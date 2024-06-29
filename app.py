@@ -121,7 +121,6 @@ def upload_file_to_gcs(file: UploadFile, bucket_name: str, blob_name: str) -> st
     blob = bucket.blob(blob_name)
 
     image = Image.open(file.file)
-    image = image.resize((290, 390), Image.ANTIALIAS)
 
     if image.format != 'JPEG':
         byte_array = BytesIO()
@@ -153,12 +152,6 @@ async def create_student(
     db: Session = Depends(get_db)
 ):
     
-    if photo.content_type != 'image/jpeg':
-        raise HTTPException(status_code=400, detail="Only JPEG images are accepted.")
-    
-
-    photo_url = upload_file_to_gcs(photo, 'fotos_sira', f'photos/{estudiante_code}')
-
     student_data = schemas.StudentCreate(
         estudiante_name=estudiante_name,
         estudiante_last_name=estudiante_last_name,
@@ -167,11 +160,23 @@ async def create_student(
         estudiante_document=estudiante_document,
         estudiante_status=estudiante_status,
         estudiante_programa_fk=estudiante_programa_fk,
-        estudiante_photo=photo_url,
         estudiante_autenticacion_fk=estudiante_autenticacion_fk
     )
+
+    new_student = crud.create_student(db=db, student=student_data)
+    db.commit()
+
+    if photo.content_type != 'image/jpeg':
+        raise HTTPException(status_code=400, detail="Only JPEG images are accepted.")
     
-    return crud.create_student(db=db, student=student_data)
+    photo_url = upload_file_to_gcs(photo, 'fotos_sira', f'photos/{new_student.estudiante_id}')
+
+    new_student.estudiante_photo = photo_url
+    db.commit()
+
+    db.refresh(new_student)
+    
+    return new_student
 
 
 @app.get("/estudiantes/{student_id}", response_model=schemas.Student)
