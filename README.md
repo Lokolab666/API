@@ -1,6 +1,9 @@
 1. Install
 
 pip install fastapi uvicorn sqlalchemy pyodbc
+pip install bcrypt
+pip install python-multipart
+pip install Pillow
 
 2. Add the database models
 
