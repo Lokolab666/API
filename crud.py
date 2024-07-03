@@ -210,8 +210,8 @@ def get_all_registrations(db: Session):
 def update_registration(db: Session, registration_id: int, registration: schemas.InscriptionUpdate):
     db_registration = db.query(Inscripcion).filter(Inscripcion.inscripcion_id == registration_id).first()
     if db_registration:
-        db_registration.grupo_fk = registration.subject_id
-        db_registration.estudiante_fk = registration.student_id
+        db_registration.grupo_fk = registration.grupo_fk
+        db_registration.estudiante_fk = registration.estudiante_fk
         db.commit()
         db.refresh(db_registration)
     return db_registration
@@ -319,7 +319,11 @@ def delete_programa(db: Session, programa_id: int):
 # CRUD for Autenticacion
 
 def create_autenticacion(db: Session, autenticacion: schemas.AutenticacionCreate):
+    print("SDSDSDSD")
+    print("CONTRASEÑA NROMAL ANTES DE", autenticacion.autenticacion_password)
     hashed_password = bcrypt.hashpw(autenticacion.autenticacion_password.encode('utf-8'), bcrypt.gensalt())
+    print("Contraseña despues de", hashed_password)
+    print("Decode", hashed_password.decode('utf-8'))
     db_autenticacion = models.Autenticacion(
         autenticacion_user=autenticacion.autenticacion_user,
         autenticacion_password=hashed_password.decode('utf-8'),

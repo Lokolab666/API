@@ -194,6 +194,10 @@ class Programa(ProgramaBase):
 
 # Autenticacion schemas
 
+class Login(BaseModel):
+    autenticacion_user: str
+    autenticacion_password: str
+
 class AutenticacionBase(BaseModel):
     aut_id: int
     autenticacion_user: str

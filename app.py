@@ -14,6 +14,8 @@ from google.cloud import storage
 from PIL import Image
 from io import BytesIO
 import asyncio
+import bcrypt
+
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -72,6 +74,13 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     # Pass other status codes to the default handler
     return await request.app.default_exception_handler(request, exc)
 
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
 
 #Registration Endpoints
 
@@ -384,14 +393,41 @@ def delete_programa(programa_id: int, db: Session = Depends(get_db)):
 
 # Autenticacion Endpoints
 
+@app.post("/login", response_model=schemas.Autenticacion)
+def login(login: schemas.Login, db: Session = Depends(get_db)):
+
+    db_user = db.query(models.Autenticacion).filter(models.Autenticacion.autenticacion_user == login.autenticacion_user).first()
+    
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+
+    stored_hash = db_user.autenticacion_password.strip()
+
+
+    login_password = login.autenticacion_password
+
+
+    if isinstance(stored_hash, str):
+        stored_hash = stored_hash.encode('utf-8')
+
+
+    if bcrypt.checkpw(login_password.encode('utf-8'), stored_hash):
+        raise HTTPException(status_code=status.HTTP_202_ACCEPTED, detail="Password is correct")
+    else:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Password is incorrect")
+
+
+
+
 @app.post("/crear_autenticacion/", response_model=schemas.Autenticacion, status_code=status.HTTP_201_CREATED)
 def create_autenticacion(autenticacion: schemas.AutenticacionCreate, db: Session = Depends(get_db)):
     return crud.create_autenticacion(db=db, autenticacion=autenticacion)
 
 
-@app.get("/autenticacion/{auth_id}", response_model=schemas.Autenticacion, status_code=status.HTTP_200_OK)
-def read_autenticacion(auth_id: int, db: Session = Depends(get_db)):
-    db_autenticacion = crud.get_autenticacion(db, auth_id=auth_id)
+@app.get("/autenticacion/{aut_id}", response_model=schemas.Autenticacion, status_code=status.HTTP_200_OK)
+def read_autenticacion(aut_id: int, db: Session = Depends(get_db)):
+    db_autenticacion = crud.get_autenticacion(db, aut_id=aut_id)
     if db_autenticacion is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Autenticacion not found")
     return db_autenticacion
