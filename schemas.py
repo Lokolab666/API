@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from fastapi import UploadFile, File
 
 # Student schemas
@@ -57,6 +57,7 @@ class SubjectBase(BaseModel):
     asignatura_id: int
     asignatura_nombre: str
     programa_fk: int
+    
 
 
 class SubjectCreate(SubjectBase):
@@ -77,6 +78,10 @@ class Subject(SubjectBase):
 
     class Config:
         orm_mode = True
+
+
+class AsignaturaBase(BaseModel):
+    asignatura_nombre: str
 
 
 # Grupo schemas
@@ -112,6 +117,17 @@ class Group(GroupBase):
     grupo_credits: int
     grupo_quotas: int
     asignatura_fk: int
+    asignatura: AsignaturaBase
+
+    class Config:
+        orm_mode = True
+
+
+class Subject_Group(BaseModel):
+    asignatura_id: int
+    asignatura_nombre: str
+    programa_fk: int
+    grupos: List[Group] = []
 
     class Config:
         orm_mode = True
@@ -197,6 +213,12 @@ class Programa(ProgramaBase):
 class Login(BaseModel):
     autenticacion_user: str
     autenticacion_password: str
+
+
+class LoginResponse(BaseModel):
+    estudiante_id: int
+    message: str
+
 
 class AutenticacionBase(BaseModel):
     aut_id: int

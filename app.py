@@ -15,11 +15,14 @@ from PIL import Image
 from io import BytesIO
 import asyncio
 import bcrypt
+from sqlalchemy.orm import joinedload
+import face_recognition
+import io
 
 
 models.Base.metadata.create_all(bind=engine)
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "gcs-key.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "deft-justice-424603-k3-bbeade0785bd.json"
 client = storage.Client()
 
 
@@ -70,6 +73,11 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         return JSONResponse(
             status_code=404,
             content={"message": "The resource you are looking for does not exist"},
+        )
+    elif exc.status_code == 400:
+        return JSONResponse(
+            status_code=400,
+            content={"message": "Incorrect data"},
         )
     # Pass other status codes to the default handler
     return await request.app.default_exception_handler(request, exc)
@@ -242,26 +250,24 @@ def read_students(
 
     students_query = db.query(models.Estudiante)
 
-    # Sorting logic
-
     if sort_direction == "asc":
         students_query = students_query.order_by(getattr(models.Estudiante, sort_by.value).asc())
     else:
         students_query = students_query.order_by(getattr(models.Estudiante, sort_by.value).desc())
 
-    # Pagination logic
     offset = (page_number - 1) * page_size
     students_query = students_query.offset(offset).limit(page_size)
 
-    # Execute query and fetch data
     students = students_query.all()
 
     return students
 
 
+
 @app.get("/estudiantes/{student_id}/materias_grupo/", response_model=List[schemas.Group])
 def get_student_subjects(student_id: int, db: Session = Depends(get_db)):
     groups = db.query(models.Grupo).\
+        options(joinedload(models.Grupo.asignatura)).\
         join(models.Inscripcion, models.Grupo.grupo_id == models.Inscripcion.grupo_fk).\
         filter(models.Inscripcion.estudiante_fk == student_id).all()
     if not groups:
@@ -317,6 +323,23 @@ def get_subject_students(grupo_id: int, db: Session = Depends(get_db)):
     return students
 
 
+
+@app.get("/estudiantes/{student_id}/asignaturas_con_grupos", response_model=List[schemas.Subject_Group])
+def get_student_subjects_with_groups(student_id: int, db: Session = Depends(get_db)):
+    # First, find the program of the student
+    student = crud.get_student(db, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # Fetch all subjects for the student's program, including groups
+    subjects = db.query(models.Asignatura).\
+        options(joinedload(models.Asignatura.grupos)).\
+        filter(models.Asignatura.programa_fk == student.estudiante_programa_fk).\
+        all()
+
+    return subjects
+
+
 # Facultad endpoints
 
 @app.post("/crear_facultad/", response_model=schemas.Facultad, status_code=status.HTTP_201_CREATED)
@@ -361,7 +384,7 @@ def create_programa(programa: schemas.ProgramaCreate, db: Session = Depends(get_
     return crud.create_programa(db=db, programa=programa)
 
 
-@app.get("/programa/{program_id}", response_model=schemas.Programa, status_code=status.HTTP_200_OK)
+@app.get("/programa/{programa_id}", response_model=schemas.Programa, status_code=status.HTTP_200_OK)
 def read_programa(programa_id: int, db: Session = Depends(get_db)):
     db_programa = crud.get_programa(db, programa_id=programa_id)
     if db_programa is None:
@@ -393,7 +416,7 @@ def delete_programa(programa_id: int, db: Session = Depends(get_db)):
 
 # Autenticacion Endpoints
 
-@app.post("/login", response_model=schemas.Autenticacion)
+@app.post("/login", response_model=schemas.LoginResponse)
 def login(login: schemas.Login, db: Session = Depends(get_db)):
 
     db_user = db.query(models.Autenticacion).filter(models.Autenticacion.autenticacion_user == login.autenticacion_user).first()
@@ -402,8 +425,9 @@ def login(login: schemas.Login, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
 
 
-    stored_hash = db_user.autenticacion_password.strip()
+    db_student_id = db.query(models.Estudiante).filter(models.Estudiante.estudiante_autenticacion_fk == db_user.aut_id).first()
 
+    stored_hash = db_user.autenticacion_password.strip()
 
     login_password = login.autenticacion_password
 
@@ -413,7 +437,10 @@ def login(login: schemas.Login, db: Session = Depends(get_db)):
 
 
     if bcrypt.checkpw(login_password.encode('utf-8'), stored_hash):
-        raise HTTPException(status_code=status.HTTP_202_ACCEPTED, detail="Password is correct")
+        return JSONResponse(
+            status_code=status.HTTP_202_ACCEPTED,
+            content={"message": "Password is correct", "student_id": db_student_id.estudiante_id, "rol": db_user.rol_fk}
+        )
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Password is incorrect")
 
@@ -547,6 +574,80 @@ def delete_rol(rol_id: int, db: Session = Depends(get_db)):
     return {"detail": "Rol deleted successfully"}
 
 
+#Ingreso Fotos
+
+def load_known_faces(bucket_name, start_photo_id, end_photo_id):
+
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    known_encodings = []
+    known_usernames = []
+
+    # Load only photos within the specified range
+    for photo_id in range(start_photo_id, end_photo_id + 1):
+        photo_name = f"photos/{photo_id}"
+        print(photo_name)
+        image_blob = bucket.blob(photo_name)
+        image_bytes = image_blob.download_as_bytes()
+        image = face_recognition.load_image_file(io.BytesIO(image_bytes))
+        face_encodings = face_recognition.face_encodings(image)
+        if face_encodings:
+            known_encodings.append(face_encodings[0])
+            known_usernames.append(str(photo_id))
+
+    return known_usernames, known_encodings
+
+
+@app.post("/login-by-face/")
+async def login_by_face(photo: UploadFile = File(...)):
+    base_dir = r"C:\Users\crist\Documentos\UPTC\10 SEMESTRE\SIMULACIÓN DE COMPUTADORES\API-main\API\fotos"
+    file_location = os.path.join(base_dir, photo.filename)
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(file_location), exist_ok=True)
+
+    # Save the file
+    file_data = await photo.read()
+
+    with open(file_location, "wb") as file_object:
+        file_object.write(file_data)
+
+    
+    # Load the image sent by the user
+    user_image = face_recognition.load_image_file(io.BytesIO(file_data))
+    user_face_encodings = face_recognition.face_encodings(user_image)
+
+    if not user_face_encodings:
+        raise HTTPException(status_code=400, detail="No faces detected in the image.")
+
+    # Load known faces and their encodings from GCP
+    print("POR AQUI 2")
+    known_usernames, known_encodings = load_known_faces('fotos_sira', 12, 23)
+
+    # Compare faces
+    for username, known_encoding in zip(known_usernames, known_encodings):
+        results = face_recognition.compare_faces([known_encoding], user_face_encodings[0], tolerance=0.6)
+        if True in results:
+            print("Welcome", username)
+            return {"message": "Logged in successfully", "student_id": username}
+
+    raise HTTPException(status_code=404, detail="No matching face found")
+
+
+@app.post("/upload_photo/")
+async def upload_photo(photo: UploadFile = File(...)):
+    # Define the base directory
+    base_dir = r"C:\Users\crist\Documentos\UPTC\10 SEMESTRE\SIMULACIÓN DE COMPUTADORES\API-main\API\fotos"
+    file_location = os.path.join(base_dir, photo.filename)
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(file_location), exist_ok=True)
+
+    # Save the file
+    with open(file_location, "wb") as file_object:
+        file_object.write(await photo.read())
+
+    return JSONResponse(content={"message": "File uploaded successfully", "file_path": file_location})
 
 
 

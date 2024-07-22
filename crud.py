@@ -109,6 +109,10 @@ def delete_subject(db: Session, subject_id: int):
     return False
 
 
+def get_subjects_by_program(db: Session, program_id: int):
+    return db.query(models.Asignatura).filter(models.Asignatura.programa_fk == program_id).all()
+
+
 # CRUD for Inscripcion
 
 def manage_subject_groups(db: Session, subject_name: str, max_groups=3):
@@ -319,11 +323,7 @@ def delete_programa(db: Session, programa_id: int):
 # CRUD for Autenticacion
 
 def create_autenticacion(db: Session, autenticacion: schemas.AutenticacionCreate):
-    print("SDSDSDSD")
-    print("CONTRASEÑA NROMAL ANTES DE", autenticacion.autenticacion_password)
     hashed_password = bcrypt.hashpw(autenticacion.autenticacion_password.encode('utf-8'), bcrypt.gensalt())
-    print("Contraseña despues de", hashed_password)
-    print("Decode", hashed_password.decode('utf-8'))
     db_autenticacion = models.Autenticacion(
         autenticacion_user=autenticacion.autenticacion_user,
         autenticacion_password=hashed_password.decode('utf-8'),
@@ -347,9 +347,10 @@ def get_all_autenticacion(db: Session):
 def update_autenticacion(db: Session, aut_id: int, autenticacion: schemas.AutenticacionUpdate):
     db_autenticacion = db.query(models.Autenticacion).filter(models.Autenticacion.aut_id == aut_id).first()
     hashed_password = bcrypt.hashpw(autenticacion.autenticacion_password.encode('utf-8'), bcrypt.gensalt())
+    
     if db_autenticacion:
         db_autenticacion.autenticacion_user = autenticacion.autenticacion_user
-        db_autenticacion.autenticacion_password = hashed_password.decode('utf-8'),
+        db_autenticacion.autenticacion_password = hashed_password.decode('utf-8')
         db_autenticacion.rol_fk = autenticacion.rol_fk
         db.commit()
         db.refresh(db_autenticacion)
