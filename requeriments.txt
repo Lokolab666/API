@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+os
+bcrypt
+face_recognition
+io
